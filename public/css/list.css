@@ -1,0 +1,16 @@
+:root{
+
+}
+
+
+.body-list{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.post-display-title{
+    align-items: vertical;
+}
+.label-register{
+
+}
