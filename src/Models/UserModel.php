@@ -1,80 +1,60 @@
 <?php
+require_once __DIR__ . '/Database.php';
 
-require_once __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'Models' . DIRECTORY_SEPARATOR . 'Database.php';
+class UserModel {
+    private PDO $conn;
 
-class UserModel
-{
-  private $conn;
-
-  function __construct()
-  {
-    $database = new Database();
-    $this->conn = $database->getConnection();
-  }
-
-  public function findAll()
-  {
-    $query = "SELECT * FROM users";
-    $stmt = $this->conn->prepare($query);
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-  }
-
-  public function find($id)
-  {
-    $query = "SELECT * FROM users WHERE id = :id";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':id', $id);
-    $stmt->execute();
-    return $stmt->fetch(PDO::FETCH_ASSOC);
-  }
-
-  public function findBy(array $params)
-  {
-    $query = "SELECT * FROM users WHERE " . implode(' AND ', array_map(function ($key) {
-      return "$key = :$key";
-    }, array_keys($params)));
-    $stmt = $this->conn->prepare($query);
-    foreach ($params as $key => $value) {
-      $stmt->bindValue(":$key", $value);
+    public function __construct() {
+        $db = new Database();
+        $this->conn = $db->getConnection();
     }
-    $stmt->execute();
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-  }
 
-  public function add($nom, $password, $email, $date_inscription)
-  {
-    $query = "INSERT INTO users (nom, password, email, date_inscription)
-    VALUES (:nom, :password, :email, :date_inscription)";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':nom', $nom);
-    $stmt->bindParam(':password', $password);
-    $stmt->bindParam(':email', $email);
-    $stmt->bindParam(':date_inscription', $date_inscription);
-    $stmt->execute();
-    return $this->conn->lastInsertId();
-  }
+    // Créer un utilisateur
+    public function register($nom, $email, $password) {
+        // Vérifier email unique
+        $check = $this->conn->prepare("SELECT id FROM users WHERE email = :email");
+        $check->bindParam(':email', $email);
+        $check->execute();
 
-  public function update($id, $nom, $password, $email)
-  {
-    $query = "UPDATE users 
-              SET nom = :nom, password = :password, email = :email
-              WHERE id = :id";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':id', $id);
-    $stmt->bindParam(':nom', $nom);
-    $stmt->bindParam(':password', $password);
-    $stmt->bindParam(':email', $email);
+        if ($check->fetch()) {
+            return "Cet email est déjà utilisé.";
+        }
 
-    return $stmt->execute();
-  }
+        $hash = password_hash($password, PASSWORD_DEFAULT);
 
-  public function delete($id)
-  {
-    $query = "DELETE FROM users WHERE id = :id";
-    $stmt = $this->conn->prepare($query);
-    $stmt->bindParam(':id', $id);
-    $stmt->execute();
-    return $stmt->rowCount() > 0;
-  }
+        $stmt = $this->conn->prepare("
+            INSERT INTO users (nom, email, password, date_inscription)
+            VALUES (:nom, :email, :password, NOW())
+        ");
+        $stmt->bindParam(':nom', $nom);
+        $stmt->bindParam(':email', $email);
+        $stmt->bindParam(':password', $hash);
+
+        return $stmt->execute() ? true : "Erreur lors de l'inscription.";
+    }
+
+    // Vérifier connexion
+    public function login($email) {
+        $stmt = $this->conn->prepare("SELECT * FROM users WHERE email = :email");
+        $stmt->bindParam(':email', $email);
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function getById($id) {
+        $stmt = $this->conn->prepare("SELECT * FROM users WHERE id = :id");
+        $stmt->bindParam(':id', $id);
+        $stmt->execute();
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function update($id, $nom, $email) {
+        $stmt = $this->conn->prepare("UPDATE users SET nom = :nom, email = :email WHERE id = :id");
+        $stmt->bindParam(':nom', $nom);
+        $stmt->bindParam(':email', $email);
+        $stmt->bindParam(':id', $id);
+        return $stmt->execute();
+    }
 }

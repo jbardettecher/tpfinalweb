@@ -1,37 +1,38 @@
-
 <?php
-require_once 'Database.php';
+require_once __DIR__ . '/../Models/CommentModel.php';
 
-class CommentModel {
-    private $db;
-    
+class CommentController {
+    private CommentModel $commentModel;
+
     public function __construct() {
-        $this->db = Database::getInstance();
+        session_start();
+        $this->commentModel = new CommentModel();
     }
-    
-    public function addComment($postId, $userId, $content) {
-        $query = "INSERT INTO comments (post_id, user_id, content, created_at) 
-                  VALUES (:post_id, :user_id, :content, NOW())";
-        
-        $stmt = $this->db->prepare($query);
-        return $stmt->execute([
-            ':post_id' => $postId,
-            ':user_id' => $userId,
-            ':content' => htmlspecialchars($content)
-        ]);
+
+    // Affiche la page d'un post avec ses commentaires
+    public function showPost($id) {
+        require_once __DIR__ . '/../Models/PostModel.php';
+        $postModel = new PostModel();
+        $post = $postModel->getPostById($id);
+        $comments = $this->commentModel->getCommentsForPost($id);
+        require __DIR__ . '/../Views/posts/show.php';
     }
-    
-    public function getCommentsByPostId($postId) {
-        $query = "SELECT c.id, c.content, c.created_at, u.username 
-                  FROM comments c 
-                  JOIN users u ON c.user_id = u.id 
-                  WHERE c.post_id = :post_id 
-                  ORDER BY c.created_at DESC";
-        
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':post_id' => $postId]);
-        
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Création classique (non-AJAX fallback)
+    public function add() {
+        if (!isset($_SESSION['user_id'])) {
+            header('Location: /index.php?action=login');
+            exit;
+        }
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $post_id = $_POST['post_id'] ?? null;
+            $content = $_POST['content'] ?? null;
+            if ($post_id && $content) {
+                $this->commentModel->createComment($content, $_SESSION['user_id'], $post_id);
+            }
+        }
+        // redirige vers le post
+        header('Location: /index.php?action=post&id=' . intval($post_id));
+        exit;
     }
 }
-?>
