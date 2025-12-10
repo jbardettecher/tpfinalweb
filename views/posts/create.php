@@ -11,7 +11,7 @@
             <label class="label-create" for="content">Contenu du Post:</label>
             <textarea id="content" name="content" required></textarea><br>
 
-            <input type="submit" value="Créer le Post">
+            <input class="btn-submit_post" type="submit" value="Créer le Post">
         </form>
     </body>
 </html>

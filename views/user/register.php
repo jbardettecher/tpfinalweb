@@ -15,7 +15,7 @@
             <label class="label-register" for="password">Mot de passe:</label>
             <input type="password" id="password" name="password" required><br>
 
-            <input type="submit" value="S'inscrire">
+            <input class="btn-submit_register" type="submit" value="S'inscrire">
         </form>
     </body>
 </html>
